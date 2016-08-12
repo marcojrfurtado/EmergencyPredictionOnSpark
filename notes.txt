@@ -1,0 +1,9 @@
+# PySpark: java.lang.OutofMemoryError: Java heap space
+
+Edit $SPARK_HOME/conf/spark-defaults.conf
+Set spark.driver.memory 15g
+
+
+
+# Deepdist: Address already in use, HTTP 404:
+Add this when initializing an instance of Deepdist: Deepdist( .. , master='127.0.0.1:[AVAILABLE PORT]', .. )
