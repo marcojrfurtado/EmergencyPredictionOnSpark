@@ -13,12 +13,21 @@ import water.fvec.H2OFrame
 import water.support.{H2OFrameSupport, SparkContextSupport, ModelMetricsSupport}
 import datautils.RefineDateColumn
 
+// Execution parameters
 
-// DATA Location
-val dataFolder = "hdfs://10.0.45.22:9000/user/opuser/seattle-data/"
-val emergencyFileName = "real_time_911_calls_SHORT.csv"
+// Force all jobs to be exetuted
+// If false, will try to use cached information
+val forceAllJobs = true
+
+// Reference Data Location
+val dataFolder = "seattle-data/"
+val emergencyFileName = "real_time_911_calls_FULL.csv"
 val cityFeatureMapFileName = "my_neighborhood_map.csv"
 
+
+// Cache data location
+val matchingCallsTable = "emergencyMatchingTable"
+val matchingCallsGroupTable = "emergencyMatchingGroupTable"
 
 // Create SQL support
 implicit val sqlContext = SQLContext.getOrCreate(sc)
@@ -29,89 +38,71 @@ import h2oContext._
 import h2oContext.implicits._
 
 
-//
-// H2O Data loader using H2O API
-//
-def loadData(datafile: String): H2OFrame = new H2OFrame(new java.net.URI(datafile))
+// Hadoop configuration
+import org.apache.hadoop
+val hconf = sc.hadoopConfiguration
+val fs = hadoop.fs.FileSystem.get(hconf)
 
-//
-// Loader for tables
-//
-def createTable(datafile: String): H2OFrame = {
-  val table = loadData(datafile)
+import datautils.TableHelpers._
 
-  // Rename coordinate columns
-  table.rename("Latitude","Station_Latitude")
-  table.rename("Longitude","Station_Longitude")
-  
-  // Update names, replace all ' ' by '_'
-  val colNames = table.names().map( n => n.trim.replace(' ', '_'))
-  table._names = colNames
-  
-  table.update()
-  table
-}
-
-def create911Table(datafile: String, datePattern:String, dateTimeZone:String): H2OFrame = {
-  val table = loadData(datafile)
-
-  // Drop unecessary columns
-  table.remove(Array(0,5))
-
-  // Refine date into multiple columns
-  val dateCol = table.vec(1)
-  table.add(new RefineDateColumn(datePattern, dateTimeZone).doIt(dateCol))
-  // Remove date column
-  table.remove(1)
-  
-  // Rename coordinate columns
-  table.rename("Latitude","Incident_Latitude")
-  table.rename("Longitude","Incident_Longitude")
-
-  table.update()
-  table
-}
-
-// LOad fire station information
-val neighbourhoodMapTable = asDataFrame(createTable(dataFolder+cityFeatureMapFileName))(sqlContext)
-val fireStationTable = neighbourhoodMapTable.filter(col("City_Feature").like("Fire Stations"))
+// Load fire station information
+val ngMapFilePath = fs.resolvePath(new hadoop.fs.Path(dataFolder+cityFeatureMapFileName))
+val neighbourhoodMapTable = asDataFrame(createTable(ngMapFilePath.toString()))(sqlContext)
+val fireStationTableRaw = neighbourhoodMapTable.filter(col("City_Feature").like("Fire Stations"))
+val fireStationTable = fireStationTableRaw.na.drop()
 
 // Load 911 call data
-val emergencyTable = asDataFrame(create911Table(dataFolder+emergencyFileName,"MM/dd/yyyy hh:mm:ss a Z", "Etc/UTC"))(sqlContext)
+val emFilePath = fs.resolvePath(new hadoop.fs.Path(dataFolder+emergencyFileName))
+val emergencyTableRaw = asDataFrame(create911Table(emFilePath.toString()))(sqlContext)
+val emergencyTable = emergencyTableRaw.na.drop()
 
 // Merge both datasets
-import datautils.MergeEmergencyCalls._
-val emergencyMatchingCalls = emergency_match(emergencyTable,fireStationTable)
-emergencyMatchingCalls.registerTempTable("emergencyMatchingTable")
-// Group data before classification and generate negative examples
-val allTypes = emergencyMatchingCalls.select("Type").dropDuplicates() // select unqiue types for left joint
-val allStations = emergencyMatchingCalls.select("Common_Name").dropDuplicates()
-val allMonths = sc.parallelize(Range(1,13)).toDF("Month")
+import datautils.MatchEmergencyCalls._
+import org.apache.spark.h2o.H2ODataFrameWriter
 
-allTypes.registerTempTable("allTypes")
-allStations.registerTempTable("allStations")
-allMonths.registerTempTable("allMonths")
+// CHeck whether data is cached
+var emergencyMatchingCalls : DataFrame = _
+val placeHolderDir = fs.resolvePath(new hadoop.fs.Path(dataFolder))
+val emMatchingPathStr = placeHolderDir+"/"+matchingCallsTable+".csv"
+val matchingCallsFileAvailable = fs.exists(new hadoop.fs.Path(emMatchingPathStr))
+if ( !forceAllJobs & matchingCallsFileAvailable ) {
+   print("Loading matching between fire stations and incidents...\n")
+   emergencyMatchingCalls = asDataFrame(loadData(emMatchingPathStr))
+} else {
+   print("Generating matching between fire stations and incidents...\n")
+   emergencyMatchingCalls = emergency_match(emergencyTable,fireStationTable)
+   
+   //Persist DataFrame
+   persistTable(asH2OFrame(emergencyMatchingCalls),emMatchingPathStr)(fs)
 
-val emergencyMatchingCallsGrouped = sqlContext.sql(
- """SELECT COUNT(e.IncidentNumber) as Ocurrences, t.Type, s.Common_Name, m.Month
-    |FROM allTypes t, allStations s, allMonths m
-    |LEFT JOIN emergencyMatchingTable e
-    |   ON e.Type = t.Type 
-    |   AND e.Common_Name = s.Common_Name
-    |   AND e.Month = m.Month
-    |GROUP BY t.Type, s.Common_Name, m.Month
- """.stripMargin)
+}
+emergencyMatchingCalls.registerTempTable(matchingCallsTable)
 
-
-
+var emergencyMatchingCallsGrouped : DataFrame = _
+val emMatchingGroupPathStr = placeHolderDir+"/"+matchingCallsGroupTable+".csv"
+val matchingGroupFileAvailable = fs.exists(new hadoop.fs.Path(emMatchingGroupPathStr))
+if ( !forceAllJobs & matchingGroupFileAvailable ) {
+   print("Loading groups of incidents..\n")
+   emergencyMatchingCallsGrouped = asDataFrame(loadData(emMatchingGroupPathStr))
+} else {
+   print("Generating groups of incidents...\n")
+   
+   emergencyMatchingCallsGrouped = sqlContext.sql(
+	 s"""SELECT COUNT(e.IncidentNumber) as Ocurrences, e.Year, e.Month, e.Type, e.Common_Name
+	    |FROM $matchingCallsTable e
+	    |GROUP BY e.Year, e.Month, e.Type, e.Common_Name
+	 """.stripMargin)
+   //Persist DataFrame
+   persistTable(asH2OFrame(emergencyMatchingCallsGrouped),emMatchingGroupPathStr)(fs)
+}
 
 // Publish as H2O Frame
 emergencyMatchingCallsGrouped.printSchema()
 val emergencyMatchGroupDF:H2OFrame = emergencyMatchingCallsGrouped
 // Transform all string columns into categorical
 H2OFrameSupport.allStringVecToCategorical(emergencyMatchGroupDF)
-
-
+*/
+/*
 
 // Split final data table
 val keys = Array[String]("train.hex", "test.hex")
@@ -139,7 +130,8 @@ def DLModel(train: H2OFrame, test: H2OFrame, response: String)
 }
 
 
+print("Ready to train model...\n")
 //
 // Build Deep Learning model
 //
-val dlModel = DLModel(train, test, 'Ocurrences) 
+val dlModel = DLModel(train, test, 'Ocurrences) */

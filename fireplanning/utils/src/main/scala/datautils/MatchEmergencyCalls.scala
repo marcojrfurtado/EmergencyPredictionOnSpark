@@ -5,6 +5,7 @@ import datautils.Haversine._
 import org.apache.spark.sql._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.functions.udf
+import org.apache.spark.sql.SchemaRDD
 //import org.apache.spark.sql.SQLContext.implicits._
 
 /**
@@ -12,7 +13,7 @@ import org.apache.spark.sql.functions.udf
  */
 
 
-object MergeEmergencyCalls {
+object MatchEmergencyCalls {
 
 	def emergency_match(emergencyTable:DataFrame,fireStationTable:DataFrame)(implicit sqlContext:SQLContext) = {
 		import sqlContext.implicits._		
@@ -44,4 +45,5 @@ object MergeEmergencyCalls {
 		emergencyMatchingCalls
 	}
 
+//	case class MatchingCalls(IncidentNumber: String, Common_Name: String,Type: String, Day: Int, Month: Int, Year: Int, WeekNum: Int, Weekend: Int, HourOfDay: Int)
 }

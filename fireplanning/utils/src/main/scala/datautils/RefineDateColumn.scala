@@ -16,7 +16,7 @@ import water.parser.{BufferedString, ParseSetup}
  * it into 8 columns: "Day", "Month", "Year", "WeekNum", "WeekDay", "Weekend", "Season", "HourOfDay"
  */
 
-class RefineDateColumn(val datePattern: String,
+class RefineDateColumn(val datePatterns: Array[(String,String)],
                        val dateTimeZone: String) extends MRTask[RefineDateColumn] {
   // Entry point
   def doIt(col: Vec): H2OFrame = {
@@ -31,7 +31,7 @@ class RefineDateColumn(val datePattern: String,
 
   override def map(cs: Array[Chunk], ncs: Array[NewChunk]): Unit = {
     // Initialize DataTime convertor (cannot be done in setupLocal since it is not H2O serializable :-/
-    val dtFmt = DateTimeFormat.forPattern(datePattern).withZone(DateTimeZone.forID(dateTimeZone))
+    val dtFmt_set = datePatterns.map{ case (k,pat) => (k, DateTimeFormat.forPattern(pat).withZone(DateTimeZone.forID(dateTimeZone))) }
     // Get input and output chunks
     val dateChunk = cs(0)
     val (dayNC, monthNC, yearNC, weekNC, weekdayNC, weekendNC, hourNC)
@@ -44,6 +44,7 @@ class RefineDateColumn(val datePattern: String,
       } else {
         // Extract data
         val ds = dateChunk.atStr(valStr, row).toString
+	val dtFmt = dtFmt_set.filter{ case (k,pat) => ds.contains(k) }(0)._2
         if (dtFmt.parseInto(mDateTime, ds, 0) > 0) {
           val month = mDateTime.getMonthOfYear
           dayNC.addNum(mDateTime.getDayOfMonth, 0)
