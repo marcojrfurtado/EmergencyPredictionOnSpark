@@ -13,7 +13,7 @@ if [ -z "$MASTER" ]; then
 fi
 
 LOCAL_DIR=$(pwd)
-export JAR_LIST=$LOCAL_DIR/../sparkling-water-1.6.5/assembly/build/libs/sparkling-water-assembly-1.6.5-all.jar,$LOCAL_DIR/utils/target/scala-2.10/utils_2.10-0.1-SNAPSHOT.jar
+export JAR_LIST="$LOCAL_DIR/utils/lib/sparkling-water-assembly-1.6.5-all.jar,$LOCAL_DIR/utils/lib/gpu-enabler_2.10-1.0.0.jar,$LOCAL_DIR/utils/target/scala-2.10/utils_2.10-0.1-SNAPSHOT.jar"
 
 
 $SPARK_HOME/bin/spark-shell \

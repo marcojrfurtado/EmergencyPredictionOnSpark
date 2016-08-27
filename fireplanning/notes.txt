@@ -1,3 +1,0 @@
-/proc/sys/vm/overcommit_memory 
-Memory cgroup out of memory: Kill process 10281 (java) score 541 or sacrifice child
-

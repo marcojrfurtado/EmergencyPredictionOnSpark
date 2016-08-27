@@ -12,6 +12,8 @@ fi
 
 
 $HADOOP_HOME/bin/hdfs \
+	dfs -rm -r seattle-data
+$HADOOP_HOME/bin/hdfs \
 	dfs -mkdir seattle-data
 $HADOOP_HOME/bin/hdfs \
 	dfs -put seattle-data/* seattle-data
