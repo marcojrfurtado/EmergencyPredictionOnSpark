@@ -28,7 +28,7 @@ object MatchEmergencyCalls {
 	
 		// Join to get every possible correspondence between fire station and incident 
 		fireStationTable.cache()
-		val joined = fireStationTable.join(emergencyTable).coalesce(joinPartitionCap)
+		val joined = fireStationTable.join(emergencyTable)//.coalesce(joinPartitionCap)
 
 		// Compute Distance between stations and incidents (using haversine distance)
 		val joined_dist_schema = joined.schema.add("Distance",DoubleType)
@@ -59,7 +59,7 @@ object MatchEmergencyCalls {
 		// Only keep stations that have minimum distance from the incident (the output has the same amount of rows as emergencyTable)
 		// Ignored collumns: e.Day, e.WeekNum, e.WeekDay, e.Weekend, e.HourOfDay
 		val emergencyMatchingCalls = sqlContext.sql(
-			"""SELECT e.IncidentNumber, e.Common_Name , e.Type , e.Month , e.Year 
+			"""SELECT e.IncidentNumber, e.Station_Name , e.Type , e.Month , e.Year 
 				|FROM emergencyJoined as e
 				|INNER JOIN minDistByIncident as m
 				|ON e.IncidentNumber = m.IncidentNumber AND e.Distance = m.MinDist""".stripMargin)

@@ -22,7 +22,7 @@ val enableGPU = false
 
 // Reference Data Location
 val dataFolder = "seattle-data/"
-val emergencyFileName = "real_time_911_calls_MED.csv"
+val emergencyFileName = "real_time_911_calls_FULL.csv"
 val cityFeatureMapFileName = "my_neighborhood_map.csv"
 
 
@@ -55,7 +55,7 @@ import datautils.TableHelpers._
 
 // Load fire station information
 val ngMapFilePath = fs.resolvePath(new hadoop.fs.Path(dataFolder+cityFeatureMapFileName))
-val neighbourhoodMapTable = asDataFrame(createTable(ngMapFilePath.toString()))(sqlContext)
+val neighbourhoodMapTable = asDataFrame(createStationTable(ngMapFilePath.toString()))(sqlContext)
 val fireStationTableRaw = neighbourhoodMapTable.filter(col("City_Feature").like("Fire Stations"))
 val fireStationTable = fireStationTableRaw.na.drop()
 
@@ -71,7 +71,6 @@ val emergencyTable = emergencyTableRaw.na.drop()
 
 // Merge both datasets
 import datautils.MatchEmergencyCalls._
-import org.apache.spark.h2o.H2ODataFrameWriter
 
 // CHeck whether data is cached
 var emergencyMatchingCalls : DataFrame = _
@@ -105,10 +104,10 @@ if ( !forceAllJobs & matchingGroupFileAvailable ) {
    print("Generating groups of incidents...\n")
    
    emergencyMatchingCallsGrouped = sqlContext.sql(
-	 s"""SELECT COUNT(e.IncidentNumber) as Ocurrences, e.Year, e.Month, e.Type, e.Common_Name
+	 s"""SELECT COUNT(e.IncidentNumber) as Ocurrences, e.Year, e.Month, e.Type, e.Station_Name
 	    |FROM $matchingCallsTable e
-	    |GROUP BY e.Year, e.Month, e.Type, e.Common_Name
-	 """.stripMargin)
+	    |GROUP BY e.Year, e.Month, e.Type, e.Station_Name
+	 """.stripMargin).drop("Year")
    //Persist DataFrame
    persistTable(asH2OFrame(emergencyMatchingCallsGrouped),emMatchingGroupPathStr)(fs)
 }

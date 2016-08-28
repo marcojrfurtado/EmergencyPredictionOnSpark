@@ -21,16 +21,18 @@ object TableHelpers {
 	//
 	// Loader for tables
 	//
-	def createTable(datafile: String): H2OFrame = {
+	def createStationTable(datafile: String): H2OFrame = {
 	  val table = loadData(datafile)
 
-	  // Rename coordinate columns
-	  table.rename("Latitude","Station_Latitude")
-	  table.rename("Longitude","Station_Longitude")
-	  
 	  // Update names, replace all ' ' by '_'
 	  val colNames = table.names().map( n => n.trim.replace(' ', '_'))
 	  table._names = colNames
+	  
+	  // Rename coordinate columns
+	  table.rename("Latitude","Station_Latitude")
+	  table.rename("Longitude","Station_Longitude")
+	  table.rename("Common_Name","Station_Name")
+	  
 	  
 	  table.update()
 	  table
