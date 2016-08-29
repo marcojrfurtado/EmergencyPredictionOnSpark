@@ -1,12 +1,12 @@
 # OpenPower- Emergency Prediction using Spark
 
-An estimated 240 million calls to 911 are made each year, only in the U.S. Firefighters constitute a significant number of first responders to these emergency calls. 
+An estimated 240 million calls to 911 are made each year, in the U.S alone. Firefighters constitute a significant number of first responders to these emergency calls. 
 Predicting frequency of emergency events is extremely useful, as it allows better fire deparment logistics. This incurs in not only a reductions of costs, but it also helps saving more lives.
 
 This project demontrates how deep learning can be used to predict amount of emergency calls, given different types of emergency events and multiple fire stations. 
 Our method relies on Apache Spark for dataprocessing, making it possible to scale across multiple machines. We also provide optional GPU processing for some operations.
 
-Data used for our experiments is public, and available from [Seattle Open Data portal](https://data.seattle.gov/).
+Data used for our experiments is public, and are made available through [Seattle Open Data portal](https://data.seattle.gov/).
 The datasets used in our experiments are the following:
 
 * [Seattle Real-Time Fire 911 Calls](https://data.seattle.gov/Public-Safety/Seattle-Real-Time-Fire-911-Calls/kzjm-xkqj)
@@ -46,6 +46,11 @@ Before running this project, set following environment variables accordingly:
 ## Building
 
 (Note: Not necessary if using pre-compiled release version)
+
+Requires [SBT](http://www.scala-sbt.org/).
+Also make sure `nvcc` is visible through the PATH environment variable.
+
+Just excute the following commands:
 
 * `cd fireplanning`
 * `./build.sh`

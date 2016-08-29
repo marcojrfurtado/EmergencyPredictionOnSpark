@@ -28,7 +28,7 @@ object MatchEmergencyCalls {
 	
 		// Join to get every possible correspondence between fire station and incident 
 		fireStationTable.cache()
-		val joined = fireStationTable.join(emergencyTable)//.coalesce(joinPartitionCap)
+		val joined = fireStationTable.join(emergencyTable).coalesce(joinPartitionCap)
 
 		// Compute Distance between stations and incidents (using haversine distance)
 		val joined_dist_schema = joined.schema.add("Distance",DoubleType)

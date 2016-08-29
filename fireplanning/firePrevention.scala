@@ -18,7 +18,7 @@ import datautils.RefineDateColumn
 // Force all jobs to be exetuted. If false, will try to use cached information
 val forceAllJobs = true
 // Enables GPU when merging datasets
-val enableGPU = false
+val enableGPU = true
 
 // Reference Data Location
 val dataFolder = "seattle-data/"
@@ -65,7 +65,7 @@ val emergencyTableRaw = asDataFrame(create911Table(emFilePath.toString()))(sqlCo
 val emergencyTable = emergencyTableRaw.na.drop()
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// STEP 2 : Merge data into a single DataFrame. Needs to compute distance between incidents and stations
+// STEP 2 : Pre-processing: Merge data into a single DataFrame. Needs to compute distance between incidents and stations
 //////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -91,7 +91,7 @@ if ( !forceAllJobs & matchingCallsFileAvailable ) {
 emergencyMatchingCalls.registerTempTable(matchingCallsTable)
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// STEP 3 : Group data based on selected features (e.g. Month of incident ). To be used for training purposes
+// STEP 3 : Pre-processing: Group data based on selected features (e.g. Month of incident ). To be used for training purposes
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 var emergencyMatchingCallsGrouped : DataFrame = _
