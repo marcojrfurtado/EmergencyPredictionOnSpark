@@ -42,6 +42,7 @@ Before running this project, set following environment variables accordingly:
 | `MASTER`      | `<URL to SPARK Master>`               |`spark://192.168.0.1:7077`              |
 | `HADOOP_HOME` | `<path to Apache Hadoop installation>`|`/home/user/hadoop`                     |
 
+See also `example_set_environment.sh`.
 
 ## Building
 
@@ -72,3 +73,7 @@ After uploading data into Hadoop, run with the following commands:
 
 This shell script will run our main application through Spark Shell in interactive mode. 
 This means that after execution, the application will not exit, and scala terminal will be available to user.
+
+## Execution logs
+
+Sample execution logs are available under `execution-log-samples` folder.

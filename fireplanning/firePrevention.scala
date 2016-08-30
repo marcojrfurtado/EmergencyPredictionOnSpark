@@ -18,7 +18,7 @@ import datautils.RefineDateColumn
 // Force all jobs to be exetuted. If false, will try to use cached information
 val forceAllJobs = true
 // Enables GPU when merging datasets
-val enableGPU = true
+val enableGPU = false
 
 // Reference Data Location
 val dataFolder = "seattle-data/"
